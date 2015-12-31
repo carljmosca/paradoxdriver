@@ -32,6 +32,9 @@ public class TableData {
         final File[] fileList = conn.getDir().listFiles(new TableFilter(pattern));
         for (final File file : fileList) {
             try {
+                if (!file.getAbsolutePath().toLowerCase().endsWith(".db")) {
+                    continue;
+                }
                 final ParadoxTable table = TableData.loadTableHeader(file);
                 if (table.isValid()) {
                     tables.add(table);
@@ -48,6 +51,9 @@ public class TableData {
         final File[] fileList = conn.getDir().listFiles(new TableFilter());
         for (final File file : fileList) {
             try {
+                if (!file.getAbsolutePath().toLowerCase().endsWith(".db")) {
+                    continue;
+                }
                 final ParadoxTable table = TableData.loadTableHeader(file);
                 if (table.isValid()) {
                     tables.add(table);
@@ -226,7 +232,7 @@ public class TableData {
     private static ParadoxTable loadTableHeader(final File file) throws IOException {
         final FileInputStream fs = new FileInputStream(file);
         final ParadoxTable table = new ParadoxTable(file, file.getName());
-        ByteBuffer buffer = ByteBuffer.allocate(2048);
+        ByteBuffer buffer = ByteBuffer.allocate(16192);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         FileChannel channel = null;
 
@@ -263,7 +269,8 @@ public class TableData {
             if (table.getVersionId() > 4) {
                 // Set the charset
                 buffer.position(0x6A);
-                table.setCharset(Charset.forName("cp" + buffer.getShort()));
+//                table.setCharset(Charset.forName("cp" + buffer.getShort()));
+                table.setCharset(Charset.forName("Cp1250"));
 
                 buffer.position(0x78);
             } else {

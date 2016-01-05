@@ -70,6 +70,11 @@ public class TableDataTest {
     public void testLoadOrders() throws Exception {
         loadTable("orders.db");
     }
+    
+    @Test
+    public void testUnclaimedFunds() throws Exception {
+        loadTable("ucfupload.db");
+    }
 
     @Test
     public void testLoadServer() throws Exception {

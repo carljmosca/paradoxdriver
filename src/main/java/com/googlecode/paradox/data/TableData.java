@@ -2,6 +2,7 @@ package com.googlecode.paradox.data;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -11,6 +12,7 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Types;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -186,48 +188,60 @@ public class TableData {
                                     break;
                                 }
                                 case 0x14: {
+                                    //TIME (4)
                                     final int a1 = 0x000000FF & buffer.get();
                                     final int a2 = 0x000000FF & buffer.get();
                                     final int a3 = 0x000000FF & buffer.get();
                                     final int a4 = 0x000000FF & buffer.get();
                                     final long timeInMillis = (a1 << 24 | a2 << 16 | a3 << 8 | a4) & 0x0FFFFFFFL;
 
-                                    if ((a1 & 0xB0) != 0) {
-                                        final Calendar calendar = new GregorianCalendar(1, 0, 0);
-                                        calendar.add(Calendar.MILLISECOND, (int) timeInMillis);
-                                        final Time time = new Time(calendar.getTimeInMillis());
-                                        fieldValue = new FieldValue(time, Types.TIME);
-                                    } else {
-                                        fieldValue = new FieldValue(Types.TIME);
-                                    }
-                                    break;
-                                }
-                                case 0x16: {
-                                    // Autoincrement
-                                    final int v = buffer.getInt() & 0x0FFFFFFF;
-                                    fieldValue = new FieldValue(v, Types.INTEGER);
-                                    break;
-                                }
-                                default:
-                                    throw new SQLException("Type " + field.getType() + " not found.");
-                            }
-                            // Field filter
-                            if (fields.contains(field)) {
-                                row.add(fieldValue);
-                            }
-                        }
-                        ret.add(row);
-                    }
-                } while (nextBlock != 0);
-            }
-        } finally {
-            if (channel != null) {
-                channel.close();
-            }
-            fs.close();
-        }
-        return ret;
-    }
+								if ((a1 & 0xB0) != 0) {
+									final Calendar calendar = new GregorianCalendar(1, 0, 0);
+									calendar.add(Calendar.MILLISECOND, (int) timeInMillis);
+									final Time time = new Time(calendar.getTimeInMillis());
+									fieldValue = new FieldValue(time, Types.TIME);
+								} else {
+									fieldValue = new FieldValue(Types.TIME);
+								}
+								break;
+							}
+							case 0x16: {
+								// Autoincrement
+								final int v = buffer.getInt() & 0x0FFFFFFF;
+								fieldValue = new FieldValue(v, Types.INTEGER);
+								break;
+							}
+							case 0x15: { //TODO ptk check if this is correct - http://docwiki.embarcadero.com/RADStudio/Seattle/en/Internal_Data_Formats
+                                                                //TIMESTAMP
+                                                                double v = buffer.getDouble() * -1; //highbit set and 2's comp in paradox
+                                                                long lv=new Double(v).longValue();
+                                                                lv-=(719163L * 86400000L); //days from 1/1/1 to 1/1/1970 in milliseconds
+ 								Calendar c = Calendar.getInstance();
+                                                                c.setTimeInMillis(lv);
+                                                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");            
+                                                                fieldValue = new FieldValue(sdf.format(c.getTime()), Types.TIMESTAMP);
+								break;
+							}
+							default:
+								throw new SQLException("Type " + field.getType() + " not found.");
+							}
+							// Field filter
+							if (fields.contains(field)) {
+								row.add(fieldValue);
+							}
+						}
+						ret.add(row);
+					}
+				} while (nextBlock != 0);
+			}
+		} finally {
+			if (channel != null) {
+				channel.close();
+			}
+			fs.close();
+		}
+		return ret;
+	}
 
     private static ParadoxTable loadTableHeader(final File file) throws IOException {
         final FileInputStream fs = new FileInputStream(file);

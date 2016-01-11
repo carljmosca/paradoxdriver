@@ -3,6 +3,7 @@ package com.googlecode.paradox.data.table.value;
 import java.sql.Date;
 import java.sql.SQLDataException;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.sql.Types;
 
 import com.googlecode.paradox.utils.SQLStates;
@@ -131,5 +132,20 @@ public class FieldValue {
 			throw new SQLDataException("Invalid field type.", SQLStates.INVALID_FIELD_VALUE);
 		}
 		return (Date) value;
+	}
+        
+	/**
+	 * Check for value type and return a Timestamp value
+	 * 
+	 * @return a valid Timestamp value
+	 * @throws SQLDataException
+	 *             if this is not a Timestamp value
+	 */
+        
+	public Timestamp getTimestamp() throws SQLDataException {
+		if (type != Types.TIMESTAMP) {
+			throw new SQLDataException("Invalid field type.", SQLStates.INVALID_FIELD_VALUE);
+		}
+		return (Timestamp) value;
 	}
 }

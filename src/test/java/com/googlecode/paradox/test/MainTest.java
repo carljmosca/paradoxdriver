@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 
 import org.junit.After;
@@ -16,6 +17,8 @@ import org.junit.runners.JUnit4;
 
 import com.googlecode.paradox.Driver;
 import com.googlecode.paradox.ParadoxConnection;
+import com.googlecode.paradox.ParadoxResultSet;
+import com.googlecode.paradox.data.table.value.FieldValue;
 
 /**
  * Generic tests for Paradox Driver
@@ -157,26 +160,34 @@ public class MainTest {
 
 	@Test
 	public void testResultSet() throws Exception {
-		Statement stmt = null;
-		ResultSet rs = null;
+            Statement stmt = null;
+            ResultSet rs = null;
 
-		try {
-			stmt = conn.createStatement();
+            try {
+                stmt = conn.createStatement();
 
-			rs = stmt.executeQuery("SELECT AC, State, CITIES FROM AREACODES");
+                //rs = (ResultSet)stmt.executeQuery("SELECT * FROM  CUSTOMER");
+                //rs = (ResultSet)stmt.executeQuery("SELECT AC, State, CITIES FROM AREACODES");
+                rs = (ResultSet)stmt.executeQuery("select  * from TOIDET ");
 
-			while (rs.next()) {
-				rs.getString("ac");
-				rs.getString("State");
-				rs.getString("Cities");
-			}
-		} finally {
-			if (rs != null) {
-				rs.close();
-			}
-			if (stmt != null) {
-				stmt.close();
-			}
-		}
+                ResultSetMetaData rsmd=rs.getMetaData();
+                int columnsNumber=rsmd.getColumnCount();
+                while (rs.next()) {
+                    for (int i = 1; i <= columnsNumber; i++) {
+                        if (i > 1) System.out.print(",  ");
+                        String columnValue = rs.getString(i);
+                        System.out.print(columnValue + " " + rsmd.getColumnName(i));
+                    }
+                    System.out.println("");
+                    //break;
+                 }
+            } finally {
+                if (rs != null) {
+                        rs.close();
+                }
+                if (stmt != null) {
+                        stmt.close();
+                }
+            }
 	}
 }

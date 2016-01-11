@@ -2,7 +2,6 @@ package com.googlecode.paradox.data;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,6 +25,8 @@ import com.googlecode.paradox.metadata.ParadoxTable;
 import com.googlecode.paradox.utils.Constants;
 import com.googlecode.paradox.utils.DateUtils;
 import com.googlecode.paradox.utils.filefilters.TableFilter;
+import java.math.BigInteger;
+import java.text.DecimalFormat;
 
 public class TableData {
 
@@ -136,24 +137,52 @@ public class TableData {
                                     break;
                                 }
                                 case 3: {
-                                    final int v = buffer.getInt();
-                                    fieldValue = new FieldValue(v, Types.INTEGER);
+                                    //PARADOX: Smallint (may be only 2 bytes)
+                                    if(field.getSize()==2) {
+                                        //v = buffer.getShort(); //pardox set high bit so always negative
+                                        byte b1 = buffer.get();
+                                        byte b2 = buffer.get();
+                                        final int v=(b1&0x7f)*256 +b2;
+                                        fieldValue = new FieldValue(v, Types.SMALLINT);
+                                    } else {
+                                        //final int v = buffer.getInt(); /pardox set high bit if number too large
+                                    	byte[] b=new byte[4];
+                                        for (int i = 0; i < b.length; ++i) {
+                                        	b[i]=buffer.get();
+                                        }
+                                        b[0]&=0x7f;
+                                    	BigInteger bi=new BigInteger(b);
+                                        fieldValue = new FieldValue(bi.longValue(), Types.BIGINT);
+                                    }
                                     break;
                                 }
                                 case 4: {
                                     // FIME long value
-                                    final int v = buffer.getInt();
-                                    fieldValue = new FieldValue(v, Types.BIGINT);
+//                                    final int v = buffer.getInt();
+//                                    fieldValue = new FieldValue(v, Types.BIGINT);
+                                    //final int v = buffer.getInt(); /pardox set high bit if number too large
+                                    byte[] b=new byte[4];
+                                    for (int i = 0; i < b.length; ++i) {
+                                            b[i]=buffer.get();
+                                    }
+                                    b[0]&=0x7f;
+                                    BigInteger bi=new BigInteger(b);
+                                        fieldValue = new FieldValue(bi.longValue(), Types.BIGINT);
                                     break;
                                 }
-                                case 5: // Currency
+                                case 5: 
+                                    // Currency - format to currency below
                                 case 6: {
                                     // Number
                                     final double v = buffer.getDouble() * -1;
                                     if (Double.compare(Double.NEGATIVE_INFINITY, 1 / v) == 0) {
                                         fieldValue = new FieldValue(Types.DOUBLE);
                                     } else {
-                                        fieldValue = new FieldValue(v, Types.DOUBLE);
+                                        if(field.getType()==5) {
+                                            fieldValue = new FieldValue(DecimalFormat.getCurrencyInstance().format(v), Types.DOUBLE);
+                                        } else {
+                                            fieldValue = new FieldValue(v, Types.DOUBLE);
+                                        }
                                     }
                                     break;
                                 }
@@ -194,45 +223,44 @@ public class TableData {
                                     final int a3 = 0x000000FF & buffer.get();
                                     final int a4 = 0x000000FF & buffer.get();
                                     final long timeInMillis = (a1 << 24 | a2 << 16 | a3 << 8 | a4) & 0x0FFFFFFFL;
-
-								if ((a1 & 0xB0) != 0) {
-									final Calendar calendar = new GregorianCalendar(1, 0, 0);
-									calendar.add(Calendar.MILLISECOND, (int) timeInMillis);
-									final Time time = new Time(calendar.getTimeInMillis());
-									fieldValue = new FieldValue(time, Types.TIME);
-								} else {
-									fieldValue = new FieldValue(Types.TIME);
-								}
-								break;
-							}
-							case 0x16: {
-								// Autoincrement
-								final int v = buffer.getInt() & 0x0FFFFFFF;
-								fieldValue = new FieldValue(v, Types.INTEGER);
-								break;
-							}
-							case 0x15: { //TODO ptk check if this is correct - http://docwiki.embarcadero.com/RADStudio/Seattle/en/Internal_Data_Formats
-                                                                //TIMESTAMP
-                                                                double v = buffer.getDouble() * -1; //highbit set and 2's comp in paradox
-                                                                long lv=new Double(v).longValue();
-                                                                lv-=(719163L * 86400000L); //days from 1/1/1 to 1/1/1970 in milliseconds
- 								Calendar c = Calendar.getInstance();
-                                                                c.setTimeInMillis(lv);
-                                                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");            
-                                                                fieldValue = new FieldValue(sdf.format(c.getTime()), Types.TIMESTAMP);
-								break;
-							}
-							default:
-								throw new SQLException("Type " + field.getType() + " not found.");
-							}
-							// Field filter
-							if (fields.contains(field)) {
-								row.add(fieldValue);
-							}
-						}
-						ret.add(row);
-					}
-				} while (nextBlock != 0);
+                                        if ((a1 & 0xB0) != 0) {
+                                                final Calendar calendar = new GregorianCalendar(1, 0, 0);
+                                                calendar.add(Calendar.MILLISECOND, (int) timeInMillis);
+                                                final Time time = new Time(calendar.getTimeInMillis());
+                                                fieldValue = new FieldValue(time, Types.TIME);
+                                        } else {
+                                                fieldValue = new FieldValue(Types.TIME);
+                                        }
+                                        break;
+                                }
+                                case 0x16: {
+                                        // Autoincrement
+                                        final int v = buffer.getInt() & 0x0FFFFFFF;
+                                        fieldValue = new FieldValue(v, Types.INTEGER);
+                                        break;
+                                }
+                                case 0x15: { //TODO ptk check if this is correct - http://docwiki.embarcadero.com/RADStudio/Seattle/en/Internal_Data_Formats
+                                        //TIMESTAMP
+                                        double v = buffer.getDouble() * -1; //highbit set and 2's comp in paradox
+                                        long lv=new Double(v).longValue();
+                                        lv-=(719163L * 86400000L); //days from 1/1/1 to 1/1/1970 in milliseconds
+                                        Calendar c = Calendar.getInstance();
+                                        c.setTimeInMillis(lv);
+                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");            
+                                        fieldValue = new FieldValue(sdf.format(c.getTime()), Types.TIMESTAMP);
+                                        break;
+                                }
+                                default:
+                                        throw new SQLException("Type " + field.getType() + " not found.");
+                                }
+                                // Field filter
+                                if (fields.contains(field)) {
+                                        row.add(fieldValue);
+                            }
+                        }
+                        ret.add(row);
+                    }
+		} while (nextBlock != 0);
 			}
 		} finally {
 			if (channel != null) {

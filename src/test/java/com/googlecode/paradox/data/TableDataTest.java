@@ -71,10 +71,10 @@ public class TableDataTest {
         loadTable("orders.db");
     }
     
-    @Test
-    public void testUnclaimedFunds() throws Exception {
-        loadTable("ucfupload.db");
-    }
+//    @Test
+//    public void testUnclaimedFunds() throws Exception {
+//        loadTable("ucfupload.db");
+//    }
 
     @Test
     public void testLoadServer() throws Exception {

@@ -166,17 +166,23 @@ public class MainTest {
             try {
                 stmt = conn.createStatement();
 
-                //rs = (ResultSet)stmt.executeQuery("SELECT * FROM  CUSTOMER");
+                rs = (ResultSet)stmt.executeQuery("SELECT * FROM  CUSTOMER");
                 //rs = (ResultSet)stmt.executeQuery("SELECT AC, State, CITIES FROM AREACODES");
-                rs = (ResultSet)stmt.executeQuery("select  * from TOIDET ");
+                //rs = (ResultSet)stmt.executeQuery("select  * from TOIDET ");
+                //rs = (ResultSet)stmt.executeQuery("select  * from receipts ");
 
                 ResultSetMetaData rsmd=rs.getMetaData();
                 int columnsNumber=rsmd.getColumnCount();
+                for (int i = 1; i <= columnsNumber; i++) {
+                    if (i > 1) System.out.print(",  ");
+                    System.out.print(rsmd.getColumnName(i));
+                }
+                System.out.println("");
                 while (rs.next()) {
                     for (int i = 1; i <= columnsNumber; i++) {
                         if (i > 1) System.out.print(",  ");
                         String columnValue = rs.getString(i);
-                        System.out.print(columnValue + " " + rsmd.getColumnName(i));
+                        System.out.print(columnValue);// + " " + rsmd.getColumnName(i));
                     }
                     System.out.println("");
                     //break;

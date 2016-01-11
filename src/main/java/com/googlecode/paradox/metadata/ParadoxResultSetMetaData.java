@@ -91,7 +91,7 @@ public class ParadoxResultSetMetaData implements ResultSetMetaData {
     @Override
     public String getColumnName(int column) throws SQLException {
         final Column dto = getColumn(column);
-        return dto.getName();
+        return dto.getField().getName(); //for some reson name is one level lower in this paradox implementation
     }
 
     @Override
